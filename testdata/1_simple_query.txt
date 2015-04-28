@@ -1,0 +1,13 @@
+---
+{
+    "id": 1,
+    "name": "Vincent",
+    "lastName": "foobar"
+}
+---
+.id, .name
+---
+{
+    "id": 1,
+    "name": "Vincent"
+}

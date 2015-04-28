@@ -1,55 +1,62 @@
 package haddoque
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 	"reflect"
 	"runtime"
-	"sort"
 	"testing"
 )
 
-var (
-	r = &objNode{
-		fields: []*objNode{
-			&objNode{name: "data", fields: []*objNode{
-				&objNode{name: "id", value: 1},
-				&objNode{name: "name", value: "Vincent"},
-				&objNode{name: "platform", fields: []*objNode{
-					&objNode{name: "type", value: "mobile"},
-					&objNode{name: "value", value: "android"},
-				}},
-			}},
-			&objNode{name: "locale", fields: []*objNode{
-				&objNode{name: "language", value: "fr"},
-				&objNode{name: "region", value: "FR"},
-			}},
-		},
-	}
-)
-
-func TestObjNode(t *testing.T) {
-	paths := r.makeAllPaths()
-	sort.Strings(paths)
-
-	exp := []string{
-		"", ".data", ".data.id", ".data.name", ".data.platform",
-		".data.platform.type", ".data.platform.value",
-		".locale", ".locale.language", ".locale.region",
-	}
-	equals(t, exp, paths)
+type engineTestData struct {
+	input    interface{}
+	expected interface{}
+	query    string
 }
 
-func TestObjNodeHasPath(t *testing.T) {
-	equals(t, true, r.hasPath(".data"))
-	equals(t, true, r.hasPath(".data.platform.type"))
-	equals(t, false, r.hasPath(".foobar"))
+type engineTest struct {
+	file string
+	data engineTestData
 }
 
-func TestObjNodeGet(t *testing.T) {
-	equals(t, 1, r.get(".data.id"))
-	equals(t, nil, r.get(".data"))
-	equals(t, "FR", r.get(".locale.region"))
+func readTest(t *testing.T, path string, input interface{}, query *string, expected interface{}) {
+	data, err := ioutil.ReadFile("testdata/" + path)
+	ok(t, err)
+
+	tokens := bytes.Split(data, []byte("---"))
+	tokens = tokens[1:]
+	for _, v := range tokens {
+		v = bytes.TrimSpace(v)
+	}
+	equals(t, 3, len(tokens))
+
+	err = json.Unmarshal(tokens[0], input)
+	ok(t, err)
+
+	*query = string(tokens[1])
+
+	err = json.Unmarshal(tokens[2], expected)
+	ok(t, err)
+}
+
+var tests = []engineTest{
+	engineTest{
+		file: "1_simple_query.txt",
+	},
+}
+
+func TestEngine(t *testing.T) {
+	for _, test := range tests {
+		readTest(t, test.file, &test.data.input, &test.data.query, &test.data.expected)
+
+		engine := NewEngine()
+		res, err := engine.Run(test.data.query, test.data.input)
+		ok(t, err)
+		equals(t, test.data.expected, res)
+	}
 }
 
 // assert fails the test if the condition is false.

@@ -20,6 +20,7 @@ func (e *binaryExpression) expr() {}
 func (e *valueExpression) expr()  {}
 func (e *fieldExpression) expr()  {}
 
+//go:generate stringer -type=operator
 type operator int
 
 const (
@@ -89,9 +90,9 @@ func evaluateBinaryExpression(node *objNode, c *binaryExpression) (res interface
 
 	switch c.op {
 	case opAnd:
-		res = leftValue != nil && rightValue != nil
+		res = isValueValid(leftValue) && isValueValid(rightValue)
 	case opOr:
-		res = leftValue != nil || rightValue != nil
+		res = isValueValid(leftValue) || isValueValid(rightValue)
 	case opLte:
 		res, err = evaluateLte(leftValue, rightValue)
 	case opGte:
@@ -109,6 +110,15 @@ func evaluateBinaryExpression(node *objNode, c *binaryExpression) (res interface
 	}
 
 	return
+}
+
+func isValueValid(val interface{}) bool {
+	switch v := val.(type) {
+	case bool:
+		return v
+	default:
+		return v != nil
+	}
 }
 
 func evaluateLte(left, right interface{}) (interface{}, error) {

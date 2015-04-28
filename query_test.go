@@ -150,6 +150,33 @@ func TestSubExpressions(t *testing.T) {
 	ok(t, err)
 	assert(t, res != nil, "res should not be nil")
 	equals(t, true, res)
+
+	condition = &binaryExpression{
+		op: opOr,
+		left: &binaryExpression{
+			op:    opEq,
+			left:  &fieldExpression{".data.platform.type"},
+			right: &valueExpression{"foobar"},
+		},
+		right: &binaryExpression{
+			op: opAnd,
+			left: &binaryExpression{
+				op:    opLt,
+				left:  &fieldExpression{".data.id"},
+				right: &valueExpression{100},
+			},
+			right: &binaryExpression{
+				op:    opNeq,
+				left:  &fieldExpression{".data.platform.value"},
+				right: &valueExpression{"android"},
+			},
+		},
+	}
+
+	res, err = evaluate(r, condition)
+	ok(t, err)
+	assert(t, res != nil, "res should not be nil")
+	equals(t, false, res)
 }
 
 func TestFilteringQuery(t *testing.T) {

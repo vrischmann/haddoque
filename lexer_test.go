@@ -134,9 +134,8 @@ var lexTests = []lexTest{
 
 func collect(t *lexTest) (items []lexeme) {
 	l := newLexer(t.input)
-	lexCh := l.lex()
 	for {
-		item := <-lexCh
+		item := l.nextLexeme()
 		items = append(items, item)
 		if item.tok == tokEOF || item.tok == tokError {
 			break
@@ -146,19 +145,12 @@ func collect(t *lexTest) (items []lexeme) {
 	return
 }
 
-func equal(i1, i2 []lexeme) bool {
-	if len(i1) != len(i2) {
-		return false
-	}
+func equalLexemes(t testing.TB, i1, i2 []lexeme) {
+	equals(t, len(i1), len(i2))
 	for k := range i1 {
-		if i1[k].tok != i2[k].tok {
-			return false
-		}
-		if i1[k].val != i2[k].val {
-			return false
-		}
+		equals(t, i1[k].tok, i2[k].tok)
+		equals(t, i1[k].val, i2[k].val)
 	}
-	return true
 }
 
 func TestLex(t *testing.T) {
@@ -167,6 +159,6 @@ func TestLex(t *testing.T) {
 		// for _, v := range items {
 		// 	fmt.Printf("%-10s %s\n", v.tok, v.val)
 		// }
-		assert(t, equal(test.items, items), "items are not equal")
+		equalLexemes(t, test.items, items)
 	}
 }

@@ -39,6 +39,7 @@ const (
 	tokContains
 
 	// operators
+	tokOperatorsBegin
 	tokLt  // <
 	tokLte // <=
 	tokGt  // >
@@ -46,6 +47,7 @@ const (
 	tokEq  // ==
 	tokNeq // !=
 	tokNot // !
+	tokOperatorsEnd
 )
 
 // this is heavily based on the package text/template from the Go distribution
@@ -54,6 +56,10 @@ type lexeme struct {
 	tok token
 	pos int
 	val string
+}
+
+func (l lexeme) String() string {
+	return fmt.Sprintf("{%s, %d, %s}", l.tok, l.pos, l.val)
 }
 
 type lexStateFn func(*lexer) lexStateFn
@@ -133,9 +139,12 @@ func (l *lexer) errorf(format string, args ...interface{}) lexStateFn {
 	return nil
 }
 
-func (l *lexer) lex() <-chan lexeme {
+func (l *lexer) lex() {
 	go l.run()
-	return l.items
+}
+
+func (l *lexer) nextLexeme() lexeme {
+	return <-l.items
 }
 
 func (l *lexer) run() {

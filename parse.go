@@ -7,116 +7,13 @@ import (
 	"strings"
 )
 
-//go:generate stringer -type=nodeType
-type nodeType int
+// this is healivy based on the code from text/template
 
-const (
-	nodeChain nodeType = iota
-	nodeList
-	nodeBool
-	nodeText
-	nodeNumber
-	nodeWhere
-	nodeAnd
-	nodeOr
-	nodeIn
-	nodeContains
-	nodeOperation
-)
-
-func (t nodeType) typ() nodeType {
-	return t
-}
-
-type node interface {
-	typ() nodeType
-	String() string
-	// TODO(vincent): position ?
-}
-
-type listNode struct {
-	nodeType
-	nodes []node
-}
-
-func (l *listNode) String() string {
-	return fmt.Sprintf("listNode{%v}", l.nodes)
-}
-
-func newListNode() *listNode {
-	return &listNode{nodeType: nodeList}
-}
-
-type chainNode struct {
-	nodeType
-	chain string
-}
-
-func (c *chainNode) String() string {
-	return fmt.Sprintf("chainNode{%s}", c.chain)
-}
-
-type boolNode struct {
-	nodeType
-	val bool
-}
-
-type textNode struct {
-	nodeType
-	text string
-}
-
-type numberNode struct {
-	nodeType
-	isInt    bool
-	isFloat  bool
-	intVal   int64
-	floatVal float64
-}
-
-type whereNode struct {
-	nodeType
-	condition node
-}
-
-func (n *whereNode) String() string {
-	return fmt.Sprintf("whereNode{%v}", n.condition)
-}
-
-type andNode struct {
-	nodeType
-	left  node
-	right node
-}
-
-func (n *andNode) String() string {
-	return fmt.Sprintf("andNode{left: %v, right: %v}", n.left, n.right)
-}
-
-type orNode struct {
-	nodeType
-	left  node
-	right node
-}
-
-func (n *orNode) String() string {
-	return fmt.Sprintf("orNode{left: %v, right: %v}", n.left, n.right)
-}
-
-type operationNode struct {
-	nodeType
-	left     node
-	right    node
-	operator token
-}
-
-func (n *operationNode) String() string {
-	return fmt.Sprintf("operationNode{left: %v, right: %v, op: %s}", n.left, n.right, n.operator)
-}
-
+// tree is the representation of a parsed query
 type tree struct {
-	root       *listNode
-	lexer      *lexer
+	root  *seqNode
+	lexer *lexer
+	// buffer for peeking
 	peekBuffer [2]lexeme
 	peekCount  int
 }
@@ -127,29 +24,7 @@ func newTree(lexer *lexer) *tree {
 	}
 }
 
-func walkTree1(root node, fn walkTreeFunc) error {
-	if err := fn(root); err != nil {
-		return err
-	}
-
-	switch n := root.(type) {
-	case *listNode:
-		for _, el := range n.nodes {
-			if err := walkTree1(el, fn); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func walkTree(tree *tree, fn walkTreeFunc) error {
-	return walkTree1(tree.root, fn)
-}
-
-type walkTreeFunc func(n node) error
-
+// nextLexeme fetches the next lexeme.
 func (t *tree) nextLexeme() lexeme {
 	if t.peekCount > 0 {
 		t.peekCount--
@@ -159,6 +34,7 @@ func (t *tree) nextLexeme() lexeme {
 	return t.peekBuffer[t.peekCount]
 }
 
+// peek returns the next lexeme without consuming it.
 func (t *tree) peek() lexeme {
 	if t.peekCount > 0 {
 		return t.peekBuffer[t.peekCount-1]
@@ -170,20 +46,18 @@ func (t *tree) peek() lexeme {
 	return t.peekBuffer[0]
 }
 
-func (t *tree) peek2() lexeme {
-	t.peek()
-	return t.peek()
-}
-
+// backup goes back one lexeme.
 func (t *tree) backup() {
 	t.peekCount++
 }
 
+// errorf panics with a formatted error.
 func (t *tree) errorf(format string, args ...interface{}) {
 	t.root = nil
 	panic(fmt.Errorf(format, args...))
 }
 
+// recover catches panics and set the attached error to errp if it's not a runtime.Error
 func (t *tree) recover(errp *error) {
 	e := recover()
 	if e != nil {
@@ -197,9 +71,10 @@ func (t *tree) recover(errp *error) {
 	return
 }
 
+// parse starts parsing the query
 func (t *tree) parse() (err error) {
 	defer t.recover(&err)
-	t.root = newListNode()
+	t.root = newSeqNode()
 
 	p := t.peek()
 	for ; p.tok != tokEOF; p = t.peek() {
@@ -207,7 +82,7 @@ func (t *tree) parse() (err error) {
 		case tokComma:
 			t.nextLexeme()
 		case tokField:
-			n := t.parseField(new([]string))
+			n := t.parseChain(new([]string))
 			t.root.nodes = append(t.root.nodes, n)
 		case tokWhere:
 			n := t.parseWhere()
@@ -220,7 +95,11 @@ func (t *tree) parse() (err error) {
 	return nil
 }
 
-func (t *tree) parseField(fields *[]string) node {
+// parseChain parses a chain of fields
+//
+// NOTE(vincent): with how it's written right now, we need to pass a non empty slice at the first call.
+// It'll need to be changed in the future.
+func (t *tree) parseChain(fields *[]string) node {
 	n := &chainNode{nodeType: nodeChain}
 	defer func() {
 		n.chain = strings.Join(*fields, "")
@@ -230,53 +109,59 @@ func (t *tree) parseField(fields *[]string) node {
 	switch l := t.nextLexeme(); {
 	case l.tok == tokField:
 		*fields = append(*fields, l.val)
-		return t.parseField(fields)
+		return t.parseChain(fields)
 	}
 	t.backup()
 
 	return n
 }
 
+// parseWhere parses a WHERE construct
 func (t *tree) parseWhere() node {
 	t.nextLexeme()
 
 	n := &whereNode{nodeType: nodeWhere}
-	n.condition = t.parseCondition(0)
+	n.condition = t.parseCondition()
 
 	ty := n.condition.typ()
-	if ty != nodeOr && ty != nodeAnd && ty != nodeOperation {
+	if ty != nodeOr && ty != nodeAnd &&
+		ty != nodeIn && ty != nodeContains &&
+		ty != nodeOperation {
 		t.errorf("unexpected condition")
 	}
 
 	return n
 }
 
-func (t *tree) parseCondition(parenDepth int) node {
-	l := t.nextLexeme()
-	if l.tok == tokLparen {
-		parenDepth++
-		return t.parseCondition(parenDepth)
-	}
-	t.backup()
-
+// parseCondition parses a condition
+func (t *tree) parseCondition() node {
 	var n node
 
-loop:
-	for {
-		l = t.nextLexeme()
-
-		fmt.Println(l)
-
-		if isBinaryExprNode(n) && t.isCompleteBinaryExprNode(n) {
-			break loop
-		}
-
+	// Right now conditions are the last piece of a query, so parseCondition reads everything
+	// until EOF.
+	//
+	// Because it's easier to handle, we require that every condition is enclosed in a pair of ().
+	//
+	// It's probably not a good implementation, but bear with me, I only just now started working with complex parsers.
+	//
+	// Here an overview of how it works:
+	//  - a condition is just a node that can later be interpreted as "truthy".
+	//    Obviously any expression which evaluates to a bool are valid,
+	//    but single values like a number of string are valid too.
+	//  - since we don't know in advance what kind of expression we have on our hand
+	//    (remember, we use the grammer <lhs> <op> <rhs>), first time round
+	//    we consider the expression a unary expression.
+	//
+	// Next time round, if we encounter an operator, we simply transform the unary expression
+	// into a binary expression, and continue reading for the right hand side.
+	for l := t.peek(); l.tok != tokEOF; l = t.peek() {
 		switch {
 		case l.tok == tokField:
+			// TODO(vincent): error handling !
 			if n == nil {
-				n = t.parseField(new([]string))
+				n = t.parseChain(new([]string))
 			} else if isBinaryExprNode(n) {
-				t.setRightNode(n, t.parseField(new([]string)))
+				t.setRightNode(n, t.parseChain(new([]string)))
 			}
 		case l.tok > tokLiteralsBegin && l.tok < tokLiteralsEnd:
 			if n == nil {
@@ -285,20 +170,29 @@ loop:
 				t.setRightNode(n, t.parseLiteral())
 			}
 		case l.tok > tokOperatorsBegin && l.tok < tokOperatorsEnd:
+			t.nextLexeme()
 			n = &operationNode{
 				nodeType: nodeOperation,
 				left:     n,
 				operator: l.tok,
 			}
 		case l.tok > tokKeywordsBegin && l.tok < tokKeywordsEnd:
-			fmt.Println("lalala")
-			t.backup()
 			n = t.parseKeyword(n)
-		case l.tok == tokRparen:
-			parenDepth--
-			if parenDepth <= 0 {
-				break loop
+		case l.tok == tokLbracket:
+			// TODO(vincent): error handling !
+			if isBinaryExprNode(n) {
+				t.setRightNode(n, t.parseLiteralSeq())
 			}
+		case l.tok == tokLparen:
+			t.nextLexeme() // consume
+			if n == nil {
+				n = t.parseCondition()
+			} else if isBinaryExprNode(n) {
+				t.setRightNode(n, t.parseCondition())
+			}
+		case l.tok == tokRparen:
+			t.nextLexeme() // consume
+			return n
 		default:
 			t.errorf("unexpected token %v", l.tok)
 		}
@@ -307,23 +201,9 @@ loop:
 	return n
 }
 
-func (t *tree) isCompleteBinaryExprNode(n node) bool {
-	switch v := n.(type) {
-	case *andNode:
-		return v.left != nil && v.right != nil
-	case *orNode:
-		return v.left != nil && v.right != nil
-	case *operationNode:
-		return v.left != nil && v.right != nil
-	default:
-		t.errorf("node not a binary expr node")
-		return false
-	}
-}
-
 func isBinaryExprNode(n node) bool {
 	switch n.(type) {
-	case *andNode, *orNode, *operationNode:
+	case *andNode, *orNode, *inNode, *containsNode, *operationNode:
 		return true
 	default:
 		return false
@@ -336,6 +216,10 @@ func (t *tree) setRightNode(n node, r node) {
 		v.right = r
 	case *orNode:
 		v.right = r
+	case *inNode:
+		v.right = r
+	case *containsNode:
+		v.right = r
 	case *operationNode:
 		v.right = r
 	default:
@@ -343,6 +227,7 @@ func (t *tree) setRightNode(n node, r node) {
 	}
 }
 
+// parseLiteral parses a literal value
 func (t *tree) parseLiteral() node {
 	var n node
 	switch l := t.nextLexeme(); {
@@ -365,12 +250,12 @@ func (t *tree) parseLiteral() node {
 	return n
 }
 
+// parseNumber parses a number value
 func (t *tree) parseNumber() node {
 	var err error
 	l := t.nextLexeme()
 	n := &numberNode{nodeType: nodeNumber}
 
-	// it's a float
 	if strings.ContainsAny(l.val, "e.") {
 		n.isFloat = true
 		n.floatVal, err = strconv.ParseFloat(l.val, 64)
@@ -388,12 +273,52 @@ func (t *tree) parseNumber() node {
 	return n
 }
 
+// parseKeyword parses a keyword
 func (t *tree) parseKeyword(left node) node {
 	switch l := t.nextLexeme(); {
+	case l.tok == tokAnd:
+		return &andNode{
+			nodeType: nodeAnd,
+			left:     left,
+		}
 	case l.tok == tokOr:
 		return &orNode{
 			nodeType: nodeOr,
 			left:     left,
+		}
+	case l.tok == tokIn:
+		return &inNode{
+			nodeType: nodeIn,
+			left:     left,
+		}
+	case l.tok == tokContains:
+		return &containsNode{
+			nodeType: nodeContains,
+			left:     left,
+		}
+	}
+
+	return nil
+}
+
+// parseLiteralSeq parses a sequence of literal values only
+func (t *tree) parseLiteralSeq() node {
+	if t.peek().tok != tokLbracket {
+		return nil
+	}
+	t.nextLexeme()
+
+	n := &seqNode{nodeType: nodeSeq}
+
+	for l := t.peek(); l.tok != tokEOF; l = t.peek() {
+		switch {
+		case l.tok == tokComma:
+			t.nextLexeme() // consume
+		case l.tok > tokLiteralsBegin && l.tok < tokLiteralsEnd:
+			n.nodes = append(n.nodes, t.parseLiteral())
+		case l.tok == tokRbracket:
+			t.nextLexeme()
+			return n
 		}
 	}
 

@@ -2,23 +2,6 @@ package haddoque
 
 import "fmt"
 
-/*
-
-Syntax which is easier to parse
-
-.name .data.id |
-or(
-    eq(.id, 1)
-    and(
-        neq(.name, "foobar")
-        lt(.id, 100)
-    )
-)
-
-Or I keep the current syntax but I'm having trouble finding a way to parse it
-
-*/
-
 type query interface {
 	exec(node *objNode) (interface{}, error)
 }

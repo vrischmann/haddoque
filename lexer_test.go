@@ -156,9 +156,6 @@ func equalLexemes(t testing.TB, i1, i2 []lexeme) {
 func TestLex(t *testing.T) {
 	for _, test := range lexTests {
 		items := collect(&test)
-		// for _, v := range items {
-		// 	fmt.Printf("%-10s %s\n", v.tok, v.val)
-		// }
 		equalLexemes(t, test.items, items)
 	}
 }

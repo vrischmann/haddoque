@@ -57,7 +57,7 @@ func newObjNode1(on *objNode, name string, obj interface{}) *objNode {
 			newOn := newObjNode1(&objNode{}, k, el)
 			on.fields = append(on.fields, newOn)
 		}
-	case string, int, int64, float64:
+	case interface{}:
 		on.value = obj
 	}
 

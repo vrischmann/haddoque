@@ -134,6 +134,7 @@ var lexTests = []lexTest{
 
 func collect(t *lexTest) (items []lexeme) {
 	l := newLexer(t.input)
+	l.lex()
 	for {
 		item := l.nextLexeme()
 		items = append(items, item)

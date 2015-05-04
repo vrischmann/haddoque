@@ -1,9 +1,6 @@
 package haddoque
 
-import (
-	"fmt"
-	"testing"
-)
+import "testing"
 
 type parseTest struct {
 	name  string
@@ -141,8 +138,6 @@ func parse(t testing.TB, test *parseTest) *tree {
 func TestParse(t *testing.T) {
 	for _, test := range parseTests[len(parseTests)-1:] {
 		tr := parse(t, &test)
-
-		fmt.Println(printIndentRoot(tr.root))
 		equals(t, printIndentRoot(test.tree.root), printIndentRoot(tr.root))
 	}
 }

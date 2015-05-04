@@ -44,7 +44,6 @@ func TestObjNodeHasPath(t *testing.T) {
 
 func TestObjNodeGet(t *testing.T) {
 	equals(t, 1, r.get(".data.id"))
-	equals(t, nil, r.get(".data"))
 	equals(t, "FR", r.get(".locale.region"))
 }
 
@@ -62,6 +61,7 @@ func TestNewObjNode(t *testing.T) {
 			"language": "fr",
 			"region":   "FR",
 		},
+		"shards": []int{1, 2, 3},
 	}
 
 	on := newObjNode(m)
@@ -73,6 +73,7 @@ func TestNewObjNode(t *testing.T) {
 		"", ".data", ".data.id", ".data.name", ".data.platform",
 		".data.platform.type", ".data.platform.value",
 		".locale", ".locale.language", ".locale.region",
+		".shards",
 	}
 	equals(t, exp, paths)
 
@@ -82,4 +83,5 @@ func TestNewObjNode(t *testing.T) {
 	equals(t, "android", on.get(".data.platform.value"))
 	equals(t, "fr", on.get(".locale.language"))
 	equals(t, "FR", on.get(".locale.region"))
+	equals(t, []int{1, 2, 3}, on.get(".shards"))
 }

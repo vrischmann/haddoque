@@ -46,6 +46,7 @@ var tests = []engineTest{
 	{file: "2_simple_filter.txt"},
 	{file: "3_complex_filter.txt"},
 	{file: "4_complex_filter_2.txt"},
+	{file: "5_in_filter.txt"},
 }
 
 func TestEngine(t *testing.T) {

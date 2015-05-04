@@ -86,15 +86,36 @@ func evaluateCondition(cond node, on *objNode) bool {
 			return false
 		}
 
+		lval := on.get(v.left.(*chainNode).chain)
 		l := v.right.(*seqNode)
 		for _, el := range l.nodes {
-			if evaluateCondition(el, on) {
+			elVal := getValue(el, on)
+			if evaluateEq(lval, elVal) {
 				return true
 			}
 		}
 
 		return false
 	case *containsNode:
+		if v.left.typ() != nodeChain {
+			return false
+		}
+
+		lval := on.get(v.left.(*chainNode).chain)
+		rval := getValue(v.right, on)
+
+		seq, ok := lval.([]interface{})
+		if !ok {
+			return false
+		}
+
+		for _, el := range seq {
+			if evaluateEq(rval, el) {
+				return true
+			}
+		}
+
+		return false
 	case *operationNode:
 		return evaluateOperationNode(v, on)
 	}
@@ -157,7 +178,7 @@ func getFields(root *seqNode, on *objNode) (interface{}, error) {
 func getValue(n node, on *objNode) interface{} {
 	switch v := n.(type) {
 	case *chainNode:
-		return on.get(v.chain)
+		return on.findSubNode(v.chain).data()
 	case *boolNode:
 		return v.val
 	case *textNode:

@@ -3,6 +3,7 @@ package haddoque
 import (
 	"fmt"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -169,6 +170,11 @@ func (t *tree) peek() lexeme {
 	return t.peekBuffer[0]
 }
 
+func (t *tree) peek2() lexeme {
+	t.peek()
+	return t.peek()
+}
+
 func (t *tree) backup() {
 	t.peekCount++
 }
@@ -235,7 +241,7 @@ func (t *tree) parseWhere() node {
 	t.nextLexeme()
 
 	n := &whereNode{nodeType: nodeWhere}
-	n.condition = nil // TODO(vincent): how do I do this ?
+	n.condition = t.parseCondition(0)
 
 	ty := n.condition.typ()
 	if ty != nodeOr && ty != nodeAnd && ty != nodeOperation {
@@ -243,4 +249,153 @@ func (t *tree) parseWhere() node {
 	}
 
 	return n
+}
+
+func (t *tree) parseCondition(parenDepth int) node {
+	l := t.nextLexeme()
+	if l.tok == tokLparen {
+		parenDepth++
+		return t.parseCondition(parenDepth)
+	}
+	t.backup()
+
+	var n node
+
+loop:
+	for {
+		l = t.nextLexeme()
+
+		fmt.Println(l)
+
+		if isBinaryExprNode(n) && t.isCompleteBinaryExprNode(n) {
+			break loop
+		}
+
+		switch {
+		case l.tok == tokField:
+			if n == nil {
+				n = t.parseField(new([]string))
+			} else if isBinaryExprNode(n) {
+				t.setRightNode(n, t.parseField(new([]string)))
+			}
+		case l.tok > tokLiteralsBegin && l.tok < tokLiteralsEnd:
+			if n == nil {
+				n = t.parseLiteral()
+			} else if isBinaryExprNode(n) {
+				t.setRightNode(n, t.parseLiteral())
+			}
+		case l.tok > tokOperatorsBegin && l.tok < tokOperatorsEnd:
+			n = &operationNode{
+				nodeType: nodeOperation,
+				left:     n,
+				operator: l.tok,
+			}
+		case l.tok > tokKeywordsBegin && l.tok < tokKeywordsEnd:
+			fmt.Println("lalala")
+			t.backup()
+			n = t.parseKeyword(n)
+		case l.tok == tokRparen:
+			parenDepth--
+			if parenDepth <= 0 {
+				break loop
+			}
+		default:
+			t.errorf("unexpected token %v", l.tok)
+		}
+	}
+
+	return n
+}
+
+func (t *tree) isCompleteBinaryExprNode(n node) bool {
+	switch v := n.(type) {
+	case *andNode:
+		return v.left != nil && v.right != nil
+	case *orNode:
+		return v.left != nil && v.right != nil
+	case *operationNode:
+		return v.left != nil && v.right != nil
+	default:
+		t.errorf("node not a binary expr node")
+		return false
+	}
+}
+
+func isBinaryExprNode(n node) bool {
+	switch n.(type) {
+	case *andNode, *orNode, *operationNode:
+		return true
+	default:
+		return false
+	}
+}
+
+func (t *tree) setRightNode(n node, r node) {
+	switch v := n.(type) {
+	case *andNode:
+		v.right = r
+	case *orNode:
+		v.right = r
+	case *operationNode:
+		v.right = r
+	default:
+		t.errorf("node not a binary expr node")
+	}
+}
+
+func (t *tree) parseLiteral() node {
+	var n node
+	switch l := t.nextLexeme(); {
+	case l.tok == tokBool:
+		val := l.val == "true"
+		n = &boolNode{
+			nodeType: nodeBool,
+			val:      val,
+		}
+	case l.tok == tokChar, l.tok == tokString:
+		n = &textNode{
+			nodeType: nodeText,
+			text:     l.val,
+		}
+	case l.tok == tokNumber:
+		t.backup()
+		n = t.parseNumber()
+	}
+
+	return n
+}
+
+func (t *tree) parseNumber() node {
+	var err error
+	l := t.nextLexeme()
+	n := &numberNode{nodeType: nodeNumber}
+
+	// it's a float
+	if strings.ContainsAny(l.val, "e.") {
+		n.isFloat = true
+		n.floatVal, err = strconv.ParseFloat(l.val, 64)
+		if err != nil {
+			t.errorf("bad number syntax. err=%v", err)
+		}
+	} else {
+		n.isInt = true
+		n.intVal, err = strconv.ParseInt(l.val, 10, 64)
+		if err != nil {
+			t.errorf("bad number syntax. err=%v", err)
+		}
+	}
+
+	return n
+}
+
+func (t *tree) parseKeyword(left node) node {
+	switch l := t.nextLexeme(); {
+	case l.tok == tokOr:
+		return &orNode{
+			nodeType: nodeOr,
+			left:     left,
+		}
+	}
+
+	return nil
 }

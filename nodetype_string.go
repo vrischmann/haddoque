@@ -4,9 +4,9 @@ package haddoque
 
 import "fmt"
 
-const _nodeType_name = "nodeChainnodeListnodeBoolnodeTextnodeNumbernodeWherenodeAndnodeOrnodeInnodeContains"
+const _nodeType_name = "nodeChainnodeListnodeBoolnodeTextnodeNumbernodeWherenodeAndnodeOrnodeInnodeContainsnodeOperation"
 
-var _nodeType_index = [...]uint8{0, 9, 17, 25, 33, 43, 52, 59, 65, 71, 83}
+var _nodeType_index = [...]uint8{0, 9, 17, 25, 33, 43, 52, 59, 65, 71, 83, 96}
 
 func (i nodeType) String() string {
 	if i < 0 || i+1 >= nodeType(len(_nodeType_index)) {

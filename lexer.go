@@ -19,10 +19,12 @@ const (
 	tokIdentifier // alphanumeric identifier not starting with . (unused for now)
 
 	// literals
+	tokLiteralsBegin
 	tokBool   // boolean constant
 	tokChar   // character constant
 	tokString // quoted string
 	tokNumber // simple number
+	tokLiteralsEnd
 
 	// misc
 	tokLparen   // (
@@ -32,11 +34,13 @@ const (
 	tokComma    // ,
 
 	// keywords
+	tokKeywordsBegin
 	tokWhere
 	tokAnd
 	tokOr
 	tokIn
 	tokContains
+	tokKeywordsEnd
 
 	// operators
 	tokOperatorsBegin

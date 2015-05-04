@@ -4,9 +4,9 @@ package haddoque
 
 import "fmt"
 
-const _token_name = "tokErrortokEOFtokWhitespacetokFieldtokIdentifiertokBooltokChartokStringtokNumbertokLparentokRparentokLbrackettokRbrackettokCommatokWheretokAndtokOrtokIntokContainstokLttokLtetokGttokGtetokEqtokNeqtokNot"
+const _token_name = "tokErrortokEOFtokWhitespacetokFieldtokIdentifiertokLiteralsBegintokBooltokChartokStringtokNumbertokLiteralsEndtokLparentokRparentokLbrackettokRbrackettokCommatokKeywordsBegintokWheretokAndtokOrtokIntokContainstokKeywordsEndtokOperatorsBegintokLttokLtetokGttokGtetokEqtokNeqtokNottokOperatorsEnd"
 
-var _token_index = [...]uint8{0, 8, 14, 27, 35, 48, 55, 62, 71, 80, 89, 98, 109, 120, 128, 136, 142, 147, 152, 163, 168, 174, 179, 185, 190, 196, 202}
+var _token_index = [...]uint16{0, 8, 14, 27, 35, 48, 64, 71, 78, 87, 96, 110, 119, 128, 139, 150, 158, 174, 182, 188, 193, 198, 209, 223, 240, 245, 251, 256, 262, 267, 273, 279, 294}
 
 func (i token) String() string {
 	if i < 0 || i+1 >= token(len(_token_index)) {

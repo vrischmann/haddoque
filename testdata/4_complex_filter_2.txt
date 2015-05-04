@@ -1,0 +1,27 @@
+{
+    "id": 1,
+    "data": {
+        "id": 1,
+        "names": {
+            "firstName": "Vincent",
+            "lastName": "Rischmann"
+        },
+        "device": {
+            "type": "mobile",
+            "platform": "android",
+            "version": 10
+        }
+    }
+}
+---
+.id, .data.names where (.data.names.firstName == "Vincent") and (.data.device.type != "ios") and (.data.device.version < 15)
+---
+{
+    "id": 1,
+    "data": {
+        "names": {
+            "firstName": "Vincent",
+            "lastName": "Rischmann"
+        }
+    }
+}

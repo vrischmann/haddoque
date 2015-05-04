@@ -27,7 +27,6 @@ func readTest(t *testing.T, path string, input interface{}, query *string, expec
 	ok(t, err)
 
 	tokens := bytes.Split(data, []byte("---"))
-	tokens = tokens[1:]
 	for _, v := range tokens {
 		v = bytes.TrimSpace(v)
 	}
@@ -43,9 +42,10 @@ func readTest(t *testing.T, path string, input interface{}, query *string, expec
 }
 
 var tests = []engineTest{
-	engineTest{
-		file: "1_simple_query.txt",
-	},
+	{file: "1_simple_query.txt"},
+	{file: "2_simple_filter.txt"},
+	{file: "3_complex_filter.txt"},
+	{file: "4_complex_filter_2.txt"},
 }
 
 func TestEngine(t *testing.T) {

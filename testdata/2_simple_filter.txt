@@ -1,10 +1,11 @@
 {
+    "lol": "hahah",
     "id": 1,
     "name": "Vincent",
     "lastName": "foobar"
 }
 ---
-.id, .name
+.id, .name where .name != "foobar"
 ---
 {
     "id": 1,

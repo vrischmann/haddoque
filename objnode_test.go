@@ -47,3 +47,39 @@ func TestObjNodeGet(t *testing.T) {
 	equals(t, nil, r.get(".data"))
 	equals(t, "FR", r.get(".locale.region"))
 }
+
+func TestNewObjNode(t *testing.T) {
+	m := map[string]interface{}{
+		"data": map[string]interface{}{
+			"id":   1,
+			"name": "Vincent",
+			"platform": map[string]interface{}{
+				"type":  "mobile",
+				"value": "android",
+			},
+		},
+		"locale": map[string]interface{}{
+			"language": "fr",
+			"region":   "FR",
+		},
+	}
+
+	on := newObjNode(m)
+	paths := on.makeAllPaths()
+
+	sort.Strings(paths)
+
+	exp := []string{
+		"", ".data", ".data.id", ".data.name", ".data.platform",
+		".data.platform.type", ".data.platform.value",
+		".locale", ".locale.language", ".locale.region",
+	}
+	equals(t, exp, paths)
+
+	equals(t, 1, on.get(".data.id"))
+	equals(t, "Vincent", on.get(".data.name"))
+	equals(t, "mobile", on.get(".data.platform.type"))
+	equals(t, "android", on.get(".data.platform.value"))
+	equals(t, "fr", on.get(".locale.language"))
+	equals(t, "FR", on.get(".locale.region"))
+}

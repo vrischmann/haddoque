@@ -1,0 +1,26 @@
+{
+    "id": 1,
+    "data": {
+        "id": 1,
+        "names": {
+            "firstName": "Vincent",
+            "lastName": "Rischmann"
+        },
+        "device": {
+            "type": "mobile",
+            "platform": "android"
+        }
+    }
+}
+---
+.id, .data.names where (.data.names.firstName == "Vincent")
+---
+{
+    "id": 1,
+    "data": {
+        "names": {
+            "firstName": "Vincent",
+            "lastName": "Rischmann"
+        }
+    }
+}

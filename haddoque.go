@@ -10,14 +10,8 @@ var (
 	ErrInvalidObject     = errors.New("unable to use the provided object")
 )
 
-type Engine struct {
-}
-
-func NewEngine() *Engine {
-	return &Engine{}
-}
-
-func (e *Engine) Run(query string, obj interface{}) (interface{}, error) {
+// Exec executes the given query on the given map data.
+func Exec(query string, obj map[string]interface{}) (interface{}, error) {
 	lexer := newLexer(query)
 	lexer.lex()
 	tr := newTree(lexer)
@@ -32,7 +26,6 @@ func (e *Engine) Run(query string, obj interface{}) (interface{}, error) {
 		return nil, ErrInvalidObject
 	}
 
-	// first check the fields exists
 	if !checkFields(tr.root, on) {
 		return nil, ErrNonExistingFields
 	}

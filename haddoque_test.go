@@ -1,4 +1,4 @@
-package haddoque
+package haddoque_test
 
 import (
 	"bytes"
@@ -9,17 +9,19 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+
+	"github.com/vrischmann/haddoque"
 )
 
-type engineTestData struct {
-	input    interface{}
+type haddoqueTestData struct {
+	input    map[string]interface{}
 	expected interface{}
 	query    string
 }
 
-type engineTest struct {
+type haddoqueTest struct {
 	file string
-	data engineTestData
+	data haddoqueTestData
 }
 
 func readTest(t *testing.T, path string, input interface{}, query *string, expected interface{}) {
@@ -41,7 +43,7 @@ func readTest(t *testing.T, path string, input interface{}, query *string, expec
 	ok(t, err)
 }
 
-var tests = []engineTest{
+var tests = []haddoqueTest{
 	{file: "1_simple_query.txt"},
 	{file: "2_simple_filter.txt"},
 	{file: "3_complex_filter.txt"},
@@ -49,12 +51,11 @@ var tests = []engineTest{
 	{file: "5_in_filter.txt"},
 }
 
-func TestEngine(t *testing.T) {
+func TestExec(t *testing.T) {
 	for _, test := range tests {
 		readTest(t, test.file, &test.data.input, &test.data.query, &test.data.expected)
 
-		engine := NewEngine()
-		res, err := engine.Run(test.data.query, test.data.input)
+		res, err := haddoque.Exec(test.data.query, test.data.input)
 		ok(t, err)
 		equals(t, test.data.expected, res)
 	}

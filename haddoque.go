@@ -6,8 +6,10 @@ import (
 )
 
 var (
+	// ErrNonExistingFields is returned when some fields in the query do not exist.
 	ErrNonExistingFields = errors.New("some requested fields do not exist")
-	ErrInvalidObject     = errors.New("unable to use the provided object")
+	// ErrInvalidObject is returned when the object given to execute the query against is invalid.
+	ErrInvalidObject = errors.New("unable to use the provided object")
 )
 
 // Exec executes the given query on the given map data.

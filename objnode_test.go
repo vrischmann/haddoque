@@ -8,17 +8,17 @@ import (
 var (
 	r = &objNode{
 		fields: []*objNode{
-			&objNode{name: "data", fields: []*objNode{
-				&objNode{name: "id", value: 1},
-				&objNode{name: "name", value: "Vincent"},
-				&objNode{name: "platform", fields: []*objNode{
-					&objNode{name: "type", value: "mobile"},
-					&objNode{name: "value", value: "android"},
+			{name: "data", fields: []*objNode{
+				{name: "id", value: 1},
+				{name: "name", value: "Vincent"},
+				{name: "platform", fields: []*objNode{
+					{name: "type", value: "mobile"},
+					{name: "value", value: "android"},
 				}},
 			}},
-			&objNode{name: "locale", fields: []*objNode{
-				&objNode{name: "language", value: "fr"},
-				&objNode{name: "region", value: "FR"},
+			{name: "locale", fields: []*objNode{
+				{name: "language", value: "fr"},
+				{name: "region", value: "FR"},
 			}},
 		},
 	}
